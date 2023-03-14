@@ -9,24 +9,26 @@ constexpr float BOARD_SIZE   = 25;
 int main() {
   const cv::Size board_grid(9, 6);
   std::vector<std::vector<cv::Point2f>> img_points;
+  
+  {
+    std::vector<cv::String> images;
+    cv::glob("data/*", images);
+    for (auto image_path : images) {
+      const cv::Mat image = cv::imread(image_path);
+      cv::Mat gray;
+      cv::threshold(image, gray, 190, 255, cv::THRESH_BINARY);
+      cv::imshow("gray_" + image_path, gray);
 
-  std::vector<cv::String> images;
-  cv::glob("data/*", images);
-  for (auto image_path : images) {
-    const cv::Mat image = cv::imread(image_path);
-    cv::Mat gray;
-    cv::threshold(image, gray, 190, 255, cv::THRESH_BINARY);
-    cv::imshow("gray_" + image_path, gray);
-
-    std::vector<cv::Point2f> point_buffer;
-    if (!cv::findChessboardCorners(gray, board_grid, point_buffer,
-        CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS)) {
-      std::cerr << "[ERROR] Failed to find corners from '" << image_path << "'" << std::endl;
-      continue;
+      std::vector<cv::Point2f> point_buffer;
+      if (!cv::findChessboardCorners(gray, board_grid, point_buffer,
+          CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FILTER_QUADS)) {
+        std::cerr << "[ERROR] Failed to find corners from '" << image_path << "'" << std::endl;
+        continue;
+      }
+      img_points.push_back(point_buffer);
+      cv::drawChessboardCorners(image, board_grid, cv::Mat(point_buffer), true);
+      cv::imshow(image_path, image);
     }
-    img_points.push_back(point_buffer);
-    cv::drawChessboardCorners(image, board_grid, cv::Mat(point_buffer), true);
-    cv::imshow(image_path, image);
   }
 
   std::vector<std::vector<cv::Point3f>> obj_points(1);
