@@ -24,7 +24,6 @@ int main() {
       std::cerr << "[ERROR] Failed to find corners from '" << image_path << "'" << std::endl;
       continue;
     }
-    std::cout << point_buffer << std::endl;
     img_points.push_back(point_buffer);
     cv::drawChessboardCorners(image, board_grid, cv::Mat(point_buffer), true);
     cv::imshow(image_path, image);
@@ -37,7 +36,15 @@ int main() {
     }
   }
   obj_points.resize(img_points.size(), obj_points[0]);
-  // TODO: call cv::calibrateCamera()
+  
+  cv::Mat camera_mat, dist_coeffs;
+  std::vector<cv::Mat> rvecs, tvecs;
+  cv::calibrateCamera(obj_points, img_points, cv::Size(640, 480), camera_mat, dist_coeffs, rvecs, tvecs);
+
+  cv::FileStorage fs("camera.yml", cv::FileStorage::WRITE);
+  fs << "camera_mat" << camera_mat;
+  fs << "dist_coeffs" << dist_coeffs;
+  fs.release();
 
   cv::waitKey(0);
   return 0;
