@@ -21,3 +21,6 @@ add_executable(${PROJECT_NAME}
 )
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
+add_executable(calibrate "calibration.cpp")
+target_link_libraries(calibrate ${OpenCV_LIBS})
+
