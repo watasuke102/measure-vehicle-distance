@@ -46,8 +46,15 @@ int main() {
     cv::undistort(frame, undistorted_image, camera_mat, dist_coeffs);
     cv::imshow("source (original)", undistorted_image);
 
+    // increase contrast
+    cv::Mat contrast;
+    undistorted_image.convertTo(contrast, -1, 1.1, 30.0);
+
+    cv::Mat bilateral;
+    cv::bilateralFilter(contrast, bilateral, 10, 20, 5);
+
     cv::Mat masked;
-    cv::inRange(undistorted_image, cv::Scalar(lo_b, lo_g, lo_r),
+    cv::inRange(bilateral, cv::Scalar(lo_b, lo_g, lo_r),
                 cv::Scalar(up_b, up_g, up_r), masked);
     cv::imshow("source", masked);
 
