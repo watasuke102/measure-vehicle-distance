@@ -1,19 +1,31 @@
 #include <algorithm>
+#include <array>
 #include <ctime>
 #include <iostream>
 #include <limits>
 #include <opencv/cv.hpp>
 #include <vector>
-#include <array>
 
-int lo_b = 100, lo_g = 90, lo_r = 160;
-int up_b = 130, up_g = 140, up_r = 200;
+int lo_b = 0, lo_g = 0, lo_r = 70;
+int up_b = 50, up_g = 50, up_r = 250;
 
 cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
+  cv::Mat hsv;
+  cv::cvtColor(origin, hsv, cv::COLOR_BGR2HSV_FULL);
+
+  std::array<cv::Mat, 3> channels;
+  cv::split(hsv, channels);
+  channels[1] *= 3;
+  channels[2] *= 1.2;
+  cv::Mat merged;
+  cv::merge(channels, merged);
+  cv::Mat bgr;
+  cv::cvtColor(merged, bgr, cv::COLOR_HSV2BGR_FULL);
+
   cv::Mat masked;
-  cv::inRange(origin, cv::Scalar(lo_b, lo_g, lo_r),
-              cv::Scalar(up_b, up_g, up_r), masked);
-  cv::imshow("source", masked);
+  cv::inRange(bgr, cv::Scalar(lo_b, lo_g, lo_r), cv::Scalar(up_b, up_g, up_r),
+              masked);
+  cv::imshow("extracted", masked);
 
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(masked, contours, cv::RETR_EXTERNAL,
@@ -60,14 +72,14 @@ int main() {
     return 1;
   }
 
-  cv::namedWindow("source", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
-                                cv::WINDOW_GUI_EXPANDED);
-  cv::createTrackbar("lo_b", "source", &lo_b, 255);
-  cv::createTrackbar("lo_g", "source", &lo_g, 255);
-  cv::createTrackbar("lo_r", "source", &lo_r, 255);
-  cv::createTrackbar("up_b", "source", &up_b, 255);
-  cv::createTrackbar("up_g", "source", &up_g, 255);
-  cv::createTrackbar("up_r", "source", &up_r, 255);
+  cv::namedWindow("extracted", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
+                                   cv::WINDOW_GUI_EXPANDED);
+  cv::createTrackbar("lo_b", "extracted", &lo_b, 255);
+  cv::createTrackbar("lo_g", "extracted", &lo_g, 255);
+  cv::createTrackbar("lo_r", "extracted", &lo_r, 255);
+  cv::createTrackbar("up_b", "extracted", &up_b, 255);
+  cv::createTrackbar("up_g", "extracted", &up_g, 255);
+  cv::createTrackbar("up_r", "extracted", &up_r, 255);
 
   cv::namedWindow("car", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
                              cv::WINDOW_GUI_EXPANDED);
