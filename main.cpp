@@ -6,9 +6,9 @@
 #include <opencv/cv.hpp>
 #include <vector>
 
-int lo_b = 0, lo_g = 0, lo_r = 70;
-int up_b = 50, up_g = 50, up_r = 250;
-int s = 30, v = 12;
+int lo_b = 0, lo_g = 0, lo_r = 150;
+int up_b = 40, up_g = 30, up_r = 250;
+int th = 175, s = 30, v = 12;
 cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   cv::Mat hsv;
   cv::cvtColor(origin, hsv, cv::COLOR_BGR2HSV_FULL);
@@ -56,6 +56,30 @@ cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   return rect;
 }
 
+cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
+  cv::Mat mask = cv::Mat::zeros(origin.size(), CV_8UC1);
+  cv::rectangle(mask, rect, cv::Scalar(255), cv::FILLED);
+  cv::Mat car;
+  origin.copyTo(car, mask);
+
+  cv::Mat contrast;
+  car.convertTo(contrast, -1, 0.8, 60.0);
+
+  std::array<cv::Mat, 3> bgr;
+  cv::split(contrast, bgr);
+  bgr[2] *= 0;
+  cv::Mat merged;
+  cv::merge(bgr, merged);
+
+  cv::Mat gray;
+  cv::cvtColor(merged, gray, cv::COLOR_BGR2GRAY);
+
+  cv::Mat threshold;
+  cv::threshold(gray, threshold, th, 255, cv::THRESH_BINARY);
+
+  return threshold.clone();
+}
+
 int main() {
   cv::Mat camera_mat, dist_coeffs;
   {
@@ -83,7 +107,6 @@ int main() {
 
   cv::namedWindow("car", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
                              cv::WINDOW_GUI_EXPANDED);
-  int th = 175;
   cv::createTrackbar("th", "car", &th, 255);
   cv::createTrackbar("s", "car", &s, 55);
   cv::createTrackbar("v", "car", &v, 55);
@@ -109,28 +132,10 @@ int main() {
     const cv::Rect rect = extract_car(undistorted_image, result);
     cv::imshow("result", result);
 
-    cv::Mat mask = cv::Mat::zeros(frame.size(), CV_8UC1);
-    cv::rectangle(mask, rect, cv::Scalar(255), cv::FILLED);
-    cv::Mat car;
-    frame.copyTo(car, mask);
+    cv::Mat led = extract_led(frame, rect);
+    cv::imshow("car", led);
 
-    cv::Mat contrast;
-    car.convertTo(contrast, -1, 0.8, 60.0);
-
-    std::array<cv::Mat, 3> bgr;
-    cv::split(contrast, bgr);
-    bgr[2] *= 0;
-    cv::Mat merged;
-    cv::merge(bgr, merged);
-
-    cv::Mat gray;
-    cv::cvtColor(merged, gray, cv::COLOR_BGR2GRAY);
-
-    cv::Mat threshold;
-    cv::threshold(gray, threshold, th, 255, cv::THRESH_BINARY);
-    cv::imshow("car", threshold);
-
-    const int key = cv::waitKey(1);
+    const int key = cv::waitKey(!stopping);
     if (key == 'w') {
       std::time_t now = std::time(nullptr);
       char time_str[24];
