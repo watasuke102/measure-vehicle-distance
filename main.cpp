@@ -4,6 +4,7 @@
 #include <limits>
 #include <opencv/cv.hpp>
 #include <vector>
+#include <array>
 
 int lo_b = 100, lo_g = 90, lo_r = 160;
 int up_b = 130, up_g = 140, up_r = 200;
@@ -59,11 +60,8 @@ int main() {
     return 1;
   }
 
-  int distance = 0;
   cv::namedWindow("source", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
                                 cv::WINDOW_GUI_EXPANDED);
-  cv::createTrackbar("distance", "source", NULL, 10000);
-
   cv::createTrackbar("lo_b", "source", &lo_b, 255);
   cv::createTrackbar("lo_g", "source", &lo_g, 255);
   cv::createTrackbar("lo_r", "source", &lo_r, 255);
@@ -71,10 +69,17 @@ int main() {
   cv::createTrackbar("up_g", "source", &up_g, 255);
   cv::createTrackbar("up_r", "source", &up_r, 255);
 
+  cv::namedWindow("car", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
+                             cv::WINDOW_GUI_EXPANDED);
+  int th = 190;
+  cv::createTrackbar("th", "car", &th, 255);
+  int distance = 0;
+  cv::createTrackbar("distance", "car", NULL, 10000);
+
   int stopping = false;
   cv::Mat frame;
   while (true) {
-    cv::setTrackbarPos("distance", "source", ++distance);
+    cv::setTrackbarPos("distance", "car", ++distance);
     if (!stopping) {
       source.read(frame);
     }
@@ -89,6 +94,21 @@ int main() {
     cv::Mat result = frame.clone();
     const cv::Rect rect = extract_car(undistorted_image, result);
     cv::imshow("result", result);
+
+    cv::Mat mask = cv::Mat::zeros(frame.size(), CV_8UC1);
+    cv::rectangle(mask, rect, cv::Scalar(255), cv::FILLED);
+    cv::Mat car;
+    frame.copyTo(car, mask);
+
+    std::array<cv::Mat, 3> bgr;
+    cv::split(car, bgr);
+    bgr[2] *= 0;
+    cv::Mat merged;
+    cv::merge(bgr, merged);
+
+    cv::Mat threshold;
+    cv::threshold(merged, threshold, th, 255, cv::THRESH_BINARY);
+    cv::imshow("car", threshold);
 
     const int key = cv::waitKey(1);
     if (key == 'w') {
