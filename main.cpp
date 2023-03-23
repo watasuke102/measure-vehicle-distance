@@ -7,16 +7,17 @@
 #include <vector>
 
 int lo_b = 0, lo_g = 0, lo_r = 70;
+// int up_b = 25, up_g = 10, up_r = 250;
 int up_b = 50, up_g = 50, up_r = 250;
-
+int s = 30, v = 12;
 cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   cv::Mat hsv;
   cv::cvtColor(origin, hsv, cv::COLOR_BGR2HSV_FULL);
 
   std::array<cv::Mat, 3> channels;
   cv::split(hsv, channels);
-  channels[1] *= 3;
-  channels[2] *= 1.2;
+  channels[1] *= s / 10.;
+  channels[2] *= v / 10.;
   cv::Mat merged;
   cv::merge(channels, merged);
   cv::Mat bgr;
@@ -85,6 +86,8 @@ int main() {
                              cv::WINDOW_GUI_EXPANDED);
   int th = 190;
   cv::createTrackbar("th", "car", &th, 255);
+  cv::createTrackbar("s", "car", &s, 55);
+  cv::createTrackbar("v", "car", &v, 55);
   int distance = 0;
   cv::createTrackbar("distance", "car", NULL, 10000);
 
