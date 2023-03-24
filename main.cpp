@@ -9,7 +9,7 @@
 
 int lo_b = 0, lo_g = 0, lo_r = 150;
 int up_b = 40, up_g = 30, up_r = 250;
-int th = 175, s = 30, v = 12;
+int s = 30, v = 12;
 cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   cv::Mat hsv;
   cv::cvtColor(origin, hsv, cv::COLOR_BGR2HSV_FULL);
@@ -57,6 +57,7 @@ cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   return rect;
 }
 
+int alpha = 8, beta = 500, th = 174;
 cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
   cv::Mat mask = cv::Mat::zeros(origin.size(), CV_8UC1);
   cv::rectangle(mask, rect, cv::Scalar(255), cv::FILLED);
@@ -64,7 +65,7 @@ cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
   origin.copyTo(car, mask);
 
   cv::Mat contrast;
-  car.convertTo(contrast, -1, 0.8, 60.0);
+  car.convertTo(contrast, -1, alpha / 10., beta / 10.);
 
   std::array<cv::Mat, 3> bgr;
   cv::split(contrast, bgr);
@@ -123,7 +124,7 @@ int main() {
   }
 
   // cv::VideoCapture source(0);
-  cv::VideoCapture source("video.avi");
+  cv::VideoCapture source("output_short.avi");
   if (!source.isOpened()) {
     std::cerr << "[Fatal] cannot open the source" << std::endl;
     return 1;
@@ -140,13 +141,17 @@ int main() {
 
   cv::namedWindow("car", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
                              cv::WINDOW_GUI_EXPANDED);
-  cv::createTrackbar("th", "car", &th, 255);
   cv::createTrackbar("s", "car", &s, 55);
   cv::createTrackbar("v", "car", &v, 55);
 
+  cv::namedWindow("led", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
+                             cv::WINDOW_GUI_EXPANDED);
+  cv::createTrackbar("alpha", "led", &alpha, 200);
+  cv::createTrackbar("beta", "led", &beta, 1200);
+  cv::createTrackbar("th", "led", &th, 255);
+
   cv::namedWindow("result", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
                                 cv::WINDOW_GUI_EXPANDED);
-  int distance = 0;
   cv::createTrackbar("distance", "result", NULL, 10000);
 
   int stopping = false;
@@ -168,10 +173,10 @@ int main() {
     cv::imshow("car", car);
 
     cv::Mat led = extract_led(frame, rect);
+    cv::imshow("led", led);
 
     cv::Mat result = frame.clone();
-    distance = calc_distance(led, result);
-    cv::setTrackbarPos("distance", "result", distance);
+    cv::setTrackbarPos("distance", "result", calc_distance(led, result));
     cv::imshow("result", result);
 
     const int key = cv::waitKey(!stopping);
