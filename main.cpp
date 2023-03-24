@@ -102,6 +102,9 @@ int calc_distance(cv::Mat origin, cv::Mat dst) {
   }
 
   const cv::Point diff = points[0] - points[1];
+  if (diff.y > 12) {
+    return -1;
+  }
   const int distance = (diff.x * diff.x) + (diff.y * diff.y);
   std::printf("(%d, %d) - (%d, %d) => (%d, %d) : %d\n",  //
               points[0].x, points[0].y,                  //
