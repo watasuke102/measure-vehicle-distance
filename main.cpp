@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <ctime>
 #include <iostream>
 #include <limits>
@@ -80,6 +81,35 @@ cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
   return threshold.clone();
 }
 
+int calc_distance(cv::Mat origin, cv::Mat dst) {
+  std::vector<std::vector<cv::Point>> contours;
+  cv::findContours(origin, contours, cv::RETR_EXTERNAL,
+                   cv::CHAIN_APPROX_SIMPLE);
+
+  std::vector<cv::Point> points;
+  for (int i = 0; i < contours.size(); ++i) {
+    const cv::Rect rect = cv::boundingRect(contours[i]);
+    const cv::Size size = rect.size();
+    if (size.width < 3 || size.height < 3) {
+      continue;
+    }
+    cv::rectangle(dst, rect, cv::Scalar(255, 255, 0), 2);
+    points.push_back(
+        cv::Point(rect.tl().x + size.width / 2, rect.tl().y + size.height / 2));
+  }
+  if (points.size() != 2) {
+    return -1;
+  }
+
+  const cv::Point diff = points[0] - points[1];
+  const int distance = (diff.x * diff.x) + (diff.y * diff.y);
+  std::printf("(%d, %d) - (%d, %d) => (%d, %d) : %d\n",  //
+              points[0].x, points[0].y,                  //
+              points[1].x, points[1].y,                  //
+              diff.x, diff.y, distance);
+  return distance;
+}
+
 int main() {
   cv::Mat camera_mat, dist_coeffs;
   {
@@ -110,13 +140,15 @@ int main() {
   cv::createTrackbar("th", "car", &th, 255);
   cv::createTrackbar("s", "car", &s, 55);
   cv::createTrackbar("v", "car", &v, 55);
+
+  cv::namedWindow("result", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
+                                cv::WINDOW_GUI_EXPANDED);
   int distance = 0;
-  cv::createTrackbar("distance", "car", NULL, 10000);
+  cv::createTrackbar("distance", "result", NULL, 10000);
 
   int stopping = false;
   cv::Mat frame;
   while (true) {
-    cv::setTrackbarPos("distance", "car", ++distance);
     if (!stopping) {
       source.read(frame);
     }
@@ -128,12 +160,16 @@ int main() {
     cv::Mat undistorted_image;
     cv::undistort(frame, undistorted_image, camera_mat, dist_coeffs);
 
-    cv::Mat result = frame.clone();
-    const cv::Rect rect = extract_car(undistorted_image, result);
-    cv::imshow("result", result);
+    cv::Mat car = frame.clone();
+    const cv::Rect rect = extract_car(undistorted_image, car);
+    cv::imshow("car", car);
 
     cv::Mat led = extract_led(frame, rect);
-    cv::imshow("car", led);
+
+    cv::Mat result = frame.clone();
+    distance = calc_distance(led, result);
+    cv::setTrackbarPos("distance", "result", distance);
+    cv::imshow("result", result);
 
     const int key = cv::waitKey(!stopping);
     if (key == 'w') {
