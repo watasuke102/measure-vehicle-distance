@@ -4,7 +4,7 @@
 #include <ctime>
 #include <iostream>
 #include <limits>
-#include <opencv/cv.hpp>
+#include <opencv4/opencv2/opencv.hpp>
 #include <vector>
 
 int lo_b = 0, lo_g = 0, lo_r = 150;
@@ -13,6 +13,7 @@ int s = 30, v = 12;
 cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   cv::Mat hsv;
   cv::cvtColor(origin, hsv, cv::COLOR_BGR2HSV_FULL);
+  // cv::imshow("origin", origin);
 
   std::array<cv::Mat, 3> channels;
   cv::split(hsv, channels);
@@ -22,14 +23,15 @@ cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   cv::merge(channels, merged);
   cv::Mat bgr;
   cv::cvtColor(merged, bgr, cv::COLOR_HSV2BGR_FULL);
+  // cv::imshow("bgr", bgr);
 
-  cv::Mat masked;
+  cv::Mat extracted;
   cv::inRange(bgr, cv::Scalar(lo_b, lo_g, lo_r), cv::Scalar(up_b, up_g, up_r),
-              masked);
-  cv::imshow("extracted", masked);
+              extracted);
+  // cv::imshow("extracted", extracted);
 
   std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(masked, contours, cv::RETR_EXTERNAL,
+  cv::findContours(extracted, contours, cv::RETR_EXTERNAL,
                    cv::CHAIN_APPROX_SIMPLE);
 
   // cv::drawContours(dst, contours, -1, cv::Scalar(0, 255, 0), 4);
@@ -57,15 +59,17 @@ cv::Rect extract_car(cv::Mat origin, cv::Mat dst) {
   return rect;
 }
 
-int alpha = 8, beta = 500, th = 174;
+int alpha = 80, beta = 550, th = 174;
 cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
   cv::Mat mask = cv::Mat::zeros(origin.size(), CV_8UC1);
   cv::rectangle(mask, rect, cv::Scalar(255), cv::FILLED);
   cv::Mat car;
   origin.copyTo(car, mask);
+  // cv::imshow("masked-car", car);
 
   cv::Mat contrast;
-  car.convertTo(contrast, -1, alpha / 10., beta / 10.);
+  car.convertTo(contrast, -1, alpha / 100., beta / 10.);
+  // cv::imshow("contrast", contrast);
 
   std::array<cv::Mat, 3> bgr;
   cv::split(contrast, bgr);
@@ -78,6 +82,7 @@ cv::Mat extract_led(cv::Mat origin, cv::Rect rect) {
 
   cv::Mat threshold;
   cv::threshold(gray, threshold, th, 255, cv::THRESH_BINARY);
+  cv::imshow("threshold", threshold);
 
   return threshold.clone();
 }
@@ -91,9 +96,10 @@ int calc_distance(cv::Mat origin, cv::Mat dst) {
   for (int i = 0; i < contours.size(); ++i) {
     const cv::Rect rect = cv::boundingRect(contours[i]);
     const cv::Size size = rect.size();
-    if (size.width < 3 || size.height < 3) {
+    if (size.width < 4 || size.height < 4) {
       continue;
     }
+    std::printf("     %d, %d\n", size.width, size.height);
     cv::rectangle(dst, rect, cv::Scalar(255, 255, 0), 2);
     points.push_back(
         cv::Point(rect.tl().x + size.width / 2, rect.tl().y + size.height / 2));
@@ -125,13 +131,13 @@ int main() {
 
   // cv::VideoCapture source(0);
   cv::VideoCapture source("output_short.avi");
+  // cv::VideoCapture source("video.avi");
   if (!source.isOpened()) {
     std::cerr << "[Fatal] cannot open the source" << std::endl;
     return 1;
   }
 
-  cv::namedWindow("extracted", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
-                                   cv::WINDOW_GUI_EXPANDED);
+  cv::namedWindow("extracted", cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
   cv::createTrackbar("lo_b", "extracted", &lo_b, 255);
   cv::createTrackbar("lo_g", "extracted", &lo_g, 255);
   cv::createTrackbar("lo_r", "extracted", &lo_r, 255);
@@ -139,19 +145,16 @@ int main() {
   cv::createTrackbar("up_g", "extracted", &up_g, 255);
   cv::createTrackbar("up_r", "extracted", &up_r, 255);
 
-  cv::namedWindow("car", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
-                             cv::WINDOW_GUI_EXPANDED);
+  cv::namedWindow("car", cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
   cv::createTrackbar("s", "car", &s, 55);
   cv::createTrackbar("v", "car", &v, 55);
 
-  cv::namedWindow("led", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
-                             cv::WINDOW_GUI_EXPANDED);
-  cv::createTrackbar("alpha", "led", &alpha, 200);
+  cv::namedWindow("led", cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+  cv::createTrackbar("alpha", "led", &alpha, 2000);
   cv::createTrackbar("beta", "led", &beta, 1200);
   cv::createTrackbar("th", "led", &th, 255);
 
-  cv::namedWindow("result", cv::WINDOW_FULLSCREEN | cv::WINDOW_KEEPRATIO |
-                                cv::WINDOW_GUI_EXPANDED);
+  cv::namedWindow("result", cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
   cv::createTrackbar("distance", "result", NULL, 10000);
 
   int stopping = false;
