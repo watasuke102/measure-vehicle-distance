@@ -8,3 +8,7 @@ research about mesuring the distance between vehicles
 
 - [Presentation slides](https://docs.google.com/presentation/d/1Ov7ourXh83CfC2xNRU8I8hN2A0yzJTHW8-_DAI7N9tQ/edit?usp=sharing)
 - [Demo movie](https://youtu.be/4nc1LkepRrA)
+
+## LICENSE
+
+DUAL - MIT or MIT-SUSHI-WARE
